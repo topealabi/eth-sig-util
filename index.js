@@ -1,6 +1,8 @@
 const ethUtil = require('ethereumjs-util');
 const ethAbi = require('ethereumjs-abi');
-const eccrypto = require('./utils/eccrypto-lite');
+const btoa = require('btoa')
+const nacl = require('tweetnacl')
+nacl.util = require('tweetnacl-util')
 
 module.exports = {
 
@@ -69,40 +71,53 @@ module.exports = {
     return ethUtil.bufferToHex(sender)
   },
 
-  encrypt: async function(senderprivateKey, receiverPublicKey, msgParams) {
-    //first sign message using personalSign functions
-    const signed = this.personalSign(ethUtil.toBuffer(senderprivateKey), msgParams);
-    
-    // then create payload
-    const payload = {
-      message: msgParams.data,
-      signed
+  encrypt: function(senderprivateKey, receiverPublicKey, msgParams) {
+
+    //string to buffer to UInt8Array
+    var privKeyUInt8Array = nacl_decodeHex(senderprivateKey);
+    var pubKeyUInt8Array = nacl_decodeHex(receiverPublicKey);
+
+    // assemble encryption parameters
+    var trimmedPubKeyUInt8Array = new Uint8Array(pubKeyUInt8Array.slice(0,32));
+    var nonce = nacl.randomBytes(nacl.box.nonceLength);
+    var msgParamsUInt8Array = stringToUint(msgParams.data);
+
+    // encrypt
+    var encryptedMessage = nacl.box(msgParamsUInt8Array, nonce, trimmedPubKeyUInt8Array, privKeyUInt8Array);
+
+    // handle encrypted data 
+    var output = {
+      version: '0x04',
+      nonce: nacl.util.encodeBase64(nonce),
+      ciphertext: nacl.util.encodeBase64(encryptedMessage)
     };
 
-    //then encrypt
-    const encrypted = await eccrypto.encryptWithPublicKey(
-      receiverPublicKey, // by encryping with bobs publicKey, only bob can decrypt the payload with his privateKey
-      JSON.stringify(payload) // we have to stringify the payload before we can encrypt it
-    );
- 
-    return encrypted;
+    // return encrypted msg data
+    return output;
   },
 
-  decrypt: async function(encryptedData, privateKey) {
-    const decrypted = await eccrypto.decryptWithPrivateKey(
-      privateKey,
-      encryptedData
-    );
+  decrypt: function(encryptedData, privateKey, publicKey) {
+    //string to buffer to UInt8Array
+    var privKeyUInt8Array = nacl_decodeHex(privateKey);
+    var pubKeyUInt8Array = nacl_decodeHex(publicKey);
 
-    const decryptedPayload = JSON.parse(decrypted);
+    // assemble decryption parameters
+    var trimmedPubKeyUInt8Array = new Uint8Array(pubKeyUInt8Array.slice(0,32));
+    var nonce = nacl.util.decodeBase64(encryptedData.nonce);
+    var ciphertext = nacl.util.decodeBase64(encryptedData.ciphertext);
 
-    //check signature
-    const senderAddress = this.recoverPersonalSignature({
-      data: decryptedPayload.message,
-      sig: decryptedPayload.signed
-    });
+    // decrypt
+    var decryptionMaterial = nacl.box.open(ciphertext, nonce, trimmedPubKeyUInt8Array, privKeyUInt8Array);
 
-    return { from: senderAddress, message: decryptedPayload.message };
+    console.log("DECRYPTION MATERIAL", decryptionMaterial);
+
+    // handle decrypted data
+    var encodedCleartext = uintToString(decryptionMaterial);
+    var decodedCleartext = nacl.util.decodeBase64(encodedCleartext);
+    var cleartext = uintToString(decodedCleartext);
+
+    // return decrypted msg data
+    return cleartext;
   }
 
 }
@@ -152,4 +167,30 @@ function padWithZeroes (number, length) {
     myString = '0' + myString
   }
   return myString
+}
+
+function nacl_encodeHex(msgUInt8Arr) {
+  var msgBase64 = nacl.util.encodeBase64(msgUInt8Arr);
+  return (new Buffer(msgBase64, 'base64')).toString('hex');
+}
+
+function nacl_decodeHex(msgHex) {
+  var msgBase64 = (new Buffer(msgHex, 'hex')).toString('base64');
+  return nacl.util.decodeBase64(msgBase64);
+}
+
+function stringToUint(string) {
+    var string = btoa(unescape(encodeURIComponent(string))),
+        charList = string.split(''),
+        uintArray = [];
+    for (var i = 0; i < charList.length; i++) {
+        uintArray.push(charList[i].charCodeAt(0));
+    }
+    return new Uint8Array(uintArray);
+}
+
+function uintToString(uintArray) {
+    var encodedString = String.fromCharCode.apply(null, uintArray),
+        decodedString = decodeURIComponent(escape(encodedString));
+    return decodedString;
 }
