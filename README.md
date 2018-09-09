@@ -82,9 +82,9 @@ Encrypts the msgParams data attribute using [nacl.box](https://tweetnacl.js.org/
 ### decrypt(encryptedData, recieverPrivateKey)
 Takes a payload of the form
 
-{ version: 'x25519-xsalsa20-poly1305',
+`{ version: 'x25519-xsalsa20-poly1305',
 nonce: '1dvWO7uOnBnO7iNDJ9kO9pTasLuKNlej',
 ephemPublicKey: 'FBH1/pAEHOOW14Lu3FWkgV3qOEcuL78Zy+qW1RwzMXQ=',
-ciphertext: 'f8kBcl/NCyf3sybfbwAKk/np2Bzt9lRVkZejr6uh5FgnNlH/ic62DZzy' };
+ciphertext: 'f8kBcl/NCyf3sybfbwAKk/np2Bzt9lRVkZejr6uh5FgnNlH/ic62DZzy' };`
 
 And returns utf8 data
