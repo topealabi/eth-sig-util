@@ -68,15 +68,22 @@ msgParams should have a `data` key that is hex-encoded data unsigned, and a `sig
 Returns a hex-encoded public key.
 
 
-### getEncryptionPublicKey(address)
+### getEncryptionPublicKey(privateKey)
 
-Takes an address of either upper or lower case, with or without a hex prefix, and returns the address owner’s encryption public key in base64
+Takes an ethereum private key of the form `7e5374ec2ef0d91761a6e72fdf8f6ac665519bfdf6da0a2329cf0d804514b816`, and returns the users’s encryption public key in base64 string format of the form `C5YMNdqE4kLgxQhJO1MfuQcHP5hjVSXzamzd/TxlR0U=`
 
 ### encrypt(recieverPublicKey, msgParams, version)
 
-Takes a base64 recieverPublicKey, a json object for msgParams of the form {data: ‘message’}, and a plaintext version parameter which identify the encryption curve and algorithm. The only version currently available is ‘x25519-xsalsa20-poly1305’.
+Takes the base64 result of `getEncryptionPublicKey(address)`, a json object for msgParams of the form `{data: ‘message’}`, and a plaintext version parameter which identify the encryption curve and algorithm. The only version currently available is `‘x25519-xsalsa20-poly1305’`.
 
 Encrypts the msgParams data attribute using [nacl.box](https://tweetnacl.js.org/#/box)
+
+returns a payload of the form: 
+
+`{ version: 'x25519-xsalsa20-poly1305',
+nonce: '1dvWO7uOnBnO7iNDJ9kO9pTasLuKNlej',
+ephemPublicKey: 'FBH1/pAEHOOW14Lu3FWkgV3qOEcuL78Zy+qW1RwzMXQ=',
+ciphertext: 'f8kBcl/NCyf3sybfbwAKk/np2Bzt9lRVkZejr6uh5FgnNlH/ic62DZzy' };`
 
 
 ### decrypt(encryptedData, recieverPrivateKey)
@@ -87,4 +94,4 @@ nonce: '1dvWO7uOnBnO7iNDJ9kO9pTasLuKNlej',
 ephemPublicKey: 'FBH1/pAEHOOW14Lu3FWkgV3qOEcuL78Zy+qW1RwzMXQ=',
 ciphertext: 'f8kBcl/NCyf3sybfbwAKk/np2Bzt9lRVkZejr6uh5FgnNlH/ic62DZzy' };`
 
-And returns utf8 data
+And returns utf8 character encoded data.
